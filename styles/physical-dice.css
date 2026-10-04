@@ -1,3 +1,849 @@
 /**
  * Physical Dice - Stylesheet
+ * Architectural design system adopting the pf2e-mobile-compact palette and tokens.
+ * Structured by layer depths: 0 (wells/inputs) -> 1 (sheets/cards) -> 2 (panels) -> 3 (controls) -> 4 (hover) -> 5 (pressed).
  */
+
+/* -------------------------------------------------------------
+   Colour Palette & Design Tokens (pf2e-mobile-compact standard)
+------------------------------------------------------------- */
+:root {
+  /* Layered surfaces: 0 deep/wells, 1 cards/frames, 2 panels, 3 controls, 4 hover, 5 pressed */
+  --m-surface-0: #111;
+  --m-surface-1: #1a1a1a;
+  --m-surface-2: #222;
+  --m-surface-3: #2a2a2a;
+  --m-surface-4: #333;
+  --m-surface-5: #444;
+
+  /* Layered borders */
+  --m-border-subtle: #333;
+  --m-border: #444;
+  --m-border-strong: #555;
+
+  /* Text greys linked to Foundry's core tokens with fallback hexes */
+  --m-text-strong: var(--color-text-light-0, #fff);
+  --m-text: var(--color-text-light-2, #ddd);
+  --m-text-soft: var(--color-text-light-4, #bbb);
+  --m-text-muted: var(--color-text-light-5, #aaa);
+  --m-text-dim: var(--color-text-light-7, #888);
+  --m-text-faint: var(--color-text-dark-5, #666);
+
+  /* Brand Accent & Status */
+  --m-accent: #ff6400; /* Physical Dice Brand Warm Orange */
+  --m-accent-hover: #ff8f00;
+  --m-accent-active: #e65100;
+  --m-accent-glow: rgba(255, 100, 0, 0.25);
+
+  --m-hue-info: var(--color-level-info, #59a1f6);
+  --m-hue-success: var(--color-level-success, #26b231);
+  --m-hue-danger: var(--color-level-error, #ce0707);
+  --m-hue-warning: var(--color-level-warning, #ee9b3a);
+
+  /* Fortune & Misfortune */
+  --m-fortune: var(--color-warm-1, #d4af37);
+  --m-misfortune: var(--color-level-error, #e53935);
+}
+
+/* -------------------------------------------------------------
+   Pending Roll Card in Chat Log
+------------------------------------------------------------- */
+.physical-dice-pending-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--m-surface-1);
+  border: 1px solid var(--m-border);
+  border-top: 2px solid var(--m-accent);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 6px 0;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  box-sizing: border-box;
+  color: var(--m-text);
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.physical-dice-pending-card:hover {
+  border-color: var(--m-accent);
+  box-shadow: 0 4px 18px rgba(255, 100, 0, 0.2);
+}
+
+/* Fortune & Misfortune Variants */
+.physical-dice-pending-card.fortune {
+  border-top-color: var(--m-fortune);
+  border-color: rgba(212, 175, 55, 0.6);
+  box-shadow: 0 4px 14px rgba(212, 175, 55, 0.2);
+}
+
+.physical-dice-pending-card.misfortune {
+  border-top-color: var(--m-misfortune);
+  border-color: rgba(229, 57, 53, 0.6);
+  box-shadow: 0 4px 14px rgba(229, 57, 53, 0.2);
+}
+
+.text-fortune {
+  color: var(--m-fortune);
+}
+
+.text-misfortune {
+  color: var(--m-misfortune);
+}
+
+/* -------------------------------------------------------------
+   Card Header & Title Group
+------------------------------------------------------------- */
+.physical-card-header {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 4px !important;
+  margin-bottom: 8px !important;
+  padding-bottom: 6px !important;
+  border-bottom: 1px solid var(--m-border-subtle) !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.physical-card-title-group {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.physical-icon {
+  font-size: 1.25rem;
+  color: var(--m-accent);
+  flex-shrink: 0;
+}
+
+.physical-titles {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.physical-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--m-text-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.physical-subtitle {
+  font-size: 0.75rem;
+  color: var(--m-text-muted);
+  line-height: 1.2;
+}
+
+.physical-target-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  background: var(--m-surface-3) !important;
+  border: 1px solid var(--m-border) !important;
+  border-radius: 4px !important;
+  padding: 2px 6px !important;
+  font-size: 0.75rem !important;
+  color: var(--m-text-soft) !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  margin-top: 2px !important;
+}
+
+/* -------------------------------------------------------------
+   Card Body & Instruction Prompts
+------------------------------------------------------------- */
+.physical-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.physical-instructions {
+  margin: 0 0 4px 0;
+  font-size: 0.85rem;
+  color: var(--m-text);
+  line-height: 1.35;
+}
+
+.physical-prompt-subnote {
+  font-size: 0.76rem;
+  color: var(--m-text-muted);
+  margin: -2px 0 6px 0;
+  font-style: italic;
+  line-height: 1.25;
+}
+
+/* -------------------------------------------------------------
+   Input Rows & Stepper Controls
+------------------------------------------------------------- */
+.physical-input-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.physical-number-input {
+  flex: 1;
+  height: 44px;
+  min-height: 44px;
+  background: var(--m-surface-0);
+  border: 1px solid var(--m-border-strong);
+  border-radius: 6px;
+  color: var(--m-text-strong);
+  font-size: 1.35rem;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.5px;
+  padding: 0 8px;
+  box-sizing: border-box;
+  outline: none;
+  touch-action: manipulation;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.physical-number-input:focus {
+  border-color: var(--m-accent);
+  box-shadow: 0 0 0 2px var(--m-accent-glow);
+}
+
+.physical-number-input.has-error {
+  border-color: var(--m-misfortune) !important;
+  box-shadow: 0 0 0 2px rgba(229, 57, 53, 0.25) !important;
+}
+
+/* Stepper Buttons (- and +) */
+.btn-stepper {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  background: var(--m-surface-3);
+  border: 1px solid var(--m-border);
+  border-radius: 6px;
+  color: var(--m-text-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  padding: 0;
+}
+
+.btn-stepper:hover {
+  background: var(--m-surface-4);
+  border-color: var(--m-border-strong);
+}
+
+.btn-stepper:active {
+  background: var(--m-surface-5);
+  border-color: var(--m-accent);
+  color: var(--m-accent);
+}
+
+/* Quick Preset Chips for d20 */
+.physical-quick-presets {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.btn-quick-preset {
+  flex: 1;
+  height: 34px;
+  min-height: 34px;
+  background: var(--m-surface-3);
+  border: 1px solid var(--m-border);
+  border-radius: 4px;
+  color: var(--m-text-soft);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.btn-quick-preset:hover {
+  background: var(--m-surface-4);
+  border-color: var(--m-accent);
+  color: var(--m-text-strong);
+}
+
+.btn-quick-preset:active {
+  background: var(--m-accent);
+  border-color: var(--m-accent);
+  color: var(--m-text-strong);
+}
+
+/* -------------------------------------------------------------
+   Damage Pools Layout & System-Standard Badges
+------------------------------------------------------------- */
+.physical-damage-pools {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.physical-pool-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--m-surface-2);
+  border: 1px solid var(--m-border-subtle);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.physical-pool-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.82rem;
+}
+
+/* Standard PF2e Damage Type Badges */
+.damage-type-badge,
+.physical-pool-type {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--m-surface-4);
+  color: var(--m-text-strong);
+}
+
+.damage-type-badge.damage-slashing,
+.physical-pool-type.type-slashing,
+.damage-type-badge.damage-piercing,
+.physical-pool-type.type-piercing,
+.damage-type-badge.damage-bludgeoning,
+.physical-pool-type.type-bludgeoning {
+  background: var(--color-border-physical, #3c3c3c);
+  color: var(--m-text-strong);
+}
+
+.damage-type-badge.damage-fire,
+.physical-pool-type.type-fire {
+  background: var(--color-border-fire, #a62f00);
+  color: var(--m-text-strong);
+}
+
+.damage-type-badge.damage-cold,
+.physical-pool-type.type-cold {
+  background: #075985;
+  color: #e0f2fe;
+}
+
+.damage-type-badge.damage-electricity,
+.physical-pool-type.type-electricity {
+  background: var(--color-border-electricity, #b8860b);
+  color: var(--m-text-strong);
+}
+
+.damage-type-badge.damage-acid,
+.physical-pool-type.type-acid {
+  background: var(--color-border-acid, #007300);
+  color: var(--m-text-strong);
+}
+
+.damage-type-badge.damage-poison,
+.physical-pool-type.type-poison {
+  background: var(--m-surface-5);
+  color: var(--m-text);
+}
+
+.damage-type-badge.damage-vitality,
+.damage-type-badge.damage-positive,
+.physical-pool-type.type-vitality,
+.physical-pool-type.type-positive {
+  background: linear-gradient(180deg, #fde68a, #facc15);
+  color: #3d2e00;
+  box-shadow: inset 0 0 0 1px #fef3c7, 0 0 6px rgba(253, 224, 71, 0.55);
+}
+
+.damage-type-badge.damage-void,
+.damage-type-badge.damage-negative,
+.physical-pool-type.type-void,
+.physical-pool-type.type-negative {
+  background: var(--color-border-void, #00001f);
+  color: #b18ad6;
+  box-shadow: inset 0 0 0 1px #3a3a6a;
+}
+
+.damage-type-badge.damage-spirit,
+.physical-pool-type.type-spirit {
+  background: #a9d6f0;
+  color: #0d2a3d;
+}
+
+.damage-type-badge.damage-force,
+.physical-pool-type.type-force {
+  background: var(--color-border-force, #6300aa);
+  color: var(--m-text-strong);
+}
+
+.damage-type-badge.damage-mental,
+.physical-pool-type.type-mental {
+  background: #9333ea;
+  color: var(--m-text-strong);
+}
+
+.damage-type-badge.damage-bleed,
+.physical-pool-type.type-bleed {
+  background: var(--color-border-bleed, #99001a);
+  color: var(--m-text-strong);
+}
+
+.physical-pool-formula {
+  font-family: monospace;
+  color: var(--m-accent);
+  font-weight: 700;
+}
+
+.physical-pool-range {
+  font-size: 0.72rem;
+  color: var(--m-text-dim);
+}
+
+/* -------------------------------------------------------------
+   Error and Waiting States
+------------------------------------------------------------- */
+.physical-error-banner {
+  padding: 6px 10px;
+  background: color-mix(in srgb, var(--m-hue-danger) 20%, #1a1a1a);
+  border-left: 3px solid var(--m-misfortune);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: color-mix(in srgb, var(--m-hue-danger) 45%, white);
+}
+
+.physical-error-banner.hidden,
+.physical-waiting-message.hidden {
+  display: none !important;
+}
+
+.physical-waiting-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  font-size: 0.85rem;
+  color: var(--m-text-muted);
+  background: var(--m-surface-0);
+  border-radius: 6px;
+}
+
+/* -------------------------------------------------------------
+   Card Actions (Submit / Cancel)
+------------------------------------------------------------- */
+.physical-card-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin-top: 10px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.btn-physical {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  border-radius: 6px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  touch-action: manipulation !important;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.05s ease !important;
+  box-sizing: border-box !important;
+  padding: 0 10px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+}
+
+.btn-physical span {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.btn-physical i {
+  flex-shrink: 0 !important;
+}
+
+.btn-physical:active {
+  transform: translateY(1px) !important;
+}
+
+.btn-submit {
+  background: var(--m-accent) !important;
+  border: 1px solid var(--m-accent-hover) !important;
+  color: var(--m-text-strong) !important;
+}
+
+.btn-submit:hover {
+  background: var(--m-accent-hover) !important;
+  border-color: var(--m-accent-hover) !important;
+}
+
+.btn-cancel {
+  background: var(--m-surface-4) !important;
+  border: 1px solid var(--m-border) !important;
+  color: var(--m-text) !important;
+  font-weight: 500 !important;
+}
+
+.btn-cancel:hover {
+  background: var(--m-surface-5) !important;
+  border-color: var(--m-border-strong) !important;
+  color: var(--m-text-strong) !important;
+}
+
+/* Submitting / Settled State */
+.physical-dice-pending-card.physical-submitting,
+.physical-dice-pending-card.physical-settled {
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+/* -------------------------------------------------------------
+   Chat Controls Integration (Above Chat Input in Roll Mode Bar)
+------------------------------------------------------------- */
+#chat-controls,
+.chat-controls {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+#chat-controls select[name="rollMode"],
+#chat-controls .roll-type-select,
+.chat-controls select[name="rollMode"],
+.chat-controls .roll-type-select {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  height: 28px !important;
+}
+
+/* Roll mode toggle button */
+.physical-dice-toggle-btn {
+  position: relative !important;
+  flex-shrink: 0 !important;
+  min-width: 32px !important;
+  width: 32px !important;
+  min-height: 28px !important;
+  height: 28px !important;
+  background: var(--m-surface-3) !important;
+  border: 1px solid var(--m-border) !important;
+  border-radius: 4px !important;
+  color: var(--m-text) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 0.95rem !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  cursor: pointer !important;
+  touch-action: manipulation !important;
+  transition: all 0.15s ease !important;
+  vertical-align: middle !important;
+}
+
+.physical-dice-toggle-btn:hover {
+  background: var(--m-surface-4) !important;
+  border-color: var(--m-border-strong) !important;
+  color: var(--m-text-strong) !important;
+}
+
+.physical-dice-toggle-btn:active {
+  background: var(--m-surface-5) !important;
+  border-color: var(--m-accent) !important;
+  color: var(--m-accent) !important;
+}
+
+/* Small corner icon badge (chip or hand) */
+.physical-dice-toggle-btn .header-btn-badge {
+  position: absolute !important;
+  right: 2px !important;
+  bottom: 1px !important;
+  font-size: 0.65rem !important;
+  line-height: 1 !important;
+  pointer-events: none !important;
+  text-shadow: 0 0 2px #111, 0 0 2px #111, 0 0 2px #111 !important;
+}
+
+.physical-dice-toggle-btn .header-btn-badge .fa-microchip {
+  color: #4fc3f7 !important; /* Digital chip: Sky Blue */
+}
+
+.physical-dice-toggle-btn .header-btn-badge .fa-hand {
+  color: #ffca28 !important; /* Physical hand: Warm Amber */
+}
+
+/* -------------------------------------------------------------
+   Popup Modal Dialog (.physical-dice-dialog-app)
+------------------------------------------------------------- */
+.physical-dice-dialog-app {
+  z-index: 10000 !important;
+}
+
+.physical-dice-dialog-app .window-content {
+  background: var(--m-surface-1) !important;
+  color: var(--m-text) !important;
+  padding: 12px 14px !important;
+}
+
+.physical-dice-dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--m-surface-2);
+  border: 1px solid var(--m-border-subtle);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.physical-dialog-header {
+  border-bottom: 1px solid var(--m-border);
+  padding-bottom: 8px;
+}
+
+.physical-dialog-header .physical-action-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--m-text-strong);
+}
+
+.physical-dialog-header .physical-action-subtitle {
+  font-size: 0.8rem;
+  color: var(--m-text-muted);
+  margin-top: 2px;
+}
+
+.physical-dialog-header .physical-target-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--m-surface-3);
+  border: 1px solid var(--m-border);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 0.75rem;
+  color: var(--m-text-soft);
+  margin-top: 6px;
+}
+
+.physical-prompt-msg {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--m-text);
+  margin-bottom: 8px;
+}
+
+.physical-d20-section {
+  text-align: center;
+  padding: 4px 0;
+}
+
+.physical-d20-section .physical-check-input-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.physical-die-input {
+  display: block;
+  margin: 0 auto;
+  width: 140px;
+  height: 52px;
+  min-height: 52px;
+  font-size: 2rem;
+  font-weight: 700;
+  text-align: center;
+  background: var(--m-surface-0);
+  border: 2px solid var(--m-accent);
+  border-radius: 8px;
+  color: var(--m-text-strong);
+  outline: none;
+  touch-action: manipulation;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.physical-die-input:focus {
+  border-color: #ffa726;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--m-accent) 50%, transparent);
+}
+
+.physical-d20-section .physical-quick-presets {
+  margin-bottom: 10px;
+}
+
+.physical-modifier-info {
+  font-size: 0.85rem;
+  color: var(--m-text-muted);
+  text-align: center;
+  margin-top: 6px;
+}
+
+.physical-damage-pools {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 0;
+}
+
+.physical-damage-row {
+  background: var(--m-surface-3);
+  border: 1px solid var(--m-border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.damage-row-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.damage-input-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.damage-input-row label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--m-text-soft);
+  min-width: 80px;
+}
+
+.physical-input-stepper-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.physical-damage-input {
+  width: 90px;
+  height: 44px;
+  min-height: 44px;
+  font-size: 1.35rem;
+  font-weight: 700;
+  text-align: center;
+  background: var(--m-surface-0);
+  border: 1px solid var(--m-border-strong);
+  border-radius: 6px;
+  color: var(--m-text-strong);
+  outline: none;
+  touch-action: manipulation;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.physical-damage-input:focus {
+  border-color: var(--m-accent);
+  box-shadow: 0 0 6px var(--m-accent-glow);
+}
+
+.damage-mod-note {
+  font-size: 0.75rem;
+  color: var(--m-text-dim);
+  font-style: italic;
+  margin-top: 2px;
+}
+
+.physical-error-msg {
+  color: var(--m-misfortune);
+  font-size: 0.82rem;
+  margin-top: 6px;
+  text-align: center;
+}
+
+.physical-error-msg.hidden {
+  display: none;
+}
+
+.physical-dialog-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.physical-dialog-footer button {
+  height: 42px;
+  min-height: 42px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.physical-dialog-footer button:hover {
+  filter: brightness(1.1);
+}
+
+.physical-dialog-footer .btn-submit {
+  flex: 2;
+  background: var(--m-accent);
+  border: 1px solid var(--m-accent-hover);
+  color: var(--m-text-strong);
+}
+
+.physical-dialog-footer .btn-submit:hover {
+  background: var(--m-accent-hover);
+}
+
+.physical-dialog-footer .btn-cancel {
+  flex: 1;
+  background: var(--m-surface-4);
+  border: 1px solid var(--m-border);
+  color: var(--m-text);
+  font-weight: 500;
+}
+
+.physical-dialog-footer .btn-cancel:hover {
+  background: var(--m-surface-5);
+  border-color: var(--m-border-strong);
+  color: var(--m-text-strong);
+}

@@ -1,0 +1,106 @@
+<div class="physical-dice-pending-card {{#if isFortune}}fortune{{/if}} {{#if isMisfortune}}misfortune{{/if}}"
+  data-message-id="{{messageId}}" data-mode="{{mode}}">
+  <header class="physical-card-header">
+    <div class="physical-card-title-group">
+      <i class="fa-solid fa-dice-d20 physical-icon"></i>
+      <div class="physical-titles">
+        <h4 class="physical-title">{{title}}</h4>
+        {{#if subtitle}}<span class="physical-subtitle">{{subtitle}}</span>{{/if}}
+      </div>
+    </div>
+    {{#if target}}
+    <div class="physical-target-badge" title="{{target.name}}">
+      <i class="fa-solid fa-crosshairs"></i>
+      <span>{{target.name}}</span>
+    </div>
+    {{/if}}
+  </header>
+
+  <div class="physical-card-body">
+    {{#if isCheck}}
+    <div class="physical-check-prompt">
+      <p class="physical-instructions">
+        {{#if isFortune}}
+        <i class="fa-solid fa-clover text-fortune"></i> <strong>Fortune:</strong> Roll 2d{{faces}} physically and enter
+        the <em>higher</em> result:
+        {{else if isMisfortune}}
+        <i class="fa-solid fa-skull text-misfortune"></i> <strong>Misfortune:</strong> Roll 2d{{faces}} physically and
+        enter the <em>lower</em> result:
+        {{else if (gt count 1)}}
+        Roll {{count}}d{{faces}} physically on the table:
+        {{else}}
+        Roll 1d{{faces}} physically on the table:
+        {{/if}}
+      </p>
+      <div class="physical-prompt-subnote">Leave blank and click Confirm to roll digitally.</div>
+
+      <div class="physical-input-row">
+        <button type="button" class="btn-stepper btn-minus" data-action="step" data-step="-1" title="Decrease">
+          <i class="fa-solid fa-minus"></i>
+        </button>
+        <input type="number" name="check-val" class="physical-number-input" data-min="1" data-max="{{faces}}"
+          inputmode="numeric" pattern="[0-9]*" min="1" max="{{faces}}" placeholder="1–{{faces}}" autocomplete="off"
+          autofocus />
+        <button type="button" class="btn-stepper btn-plus" data-action="step" data-step="1" title="Increase">
+          <i class="fa-solid fa-plus"></i>
+        </button>
+      </div>
+
+      {{#if (eq faces 20)}}
+      <div class="physical-quick-presets">
+        <button type="button" class="btn-quick-preset" data-val="1" title="Natural 1">Nat 1</button>
+        <button type="button" class="btn-quick-preset" data-val="20" title="Natural 20">Nat 20</button>
+      </div>
+      {{/if}}
+    </div>
+    {{else}}
+    <div class="physical-damage-prompt">
+      <p class="physical-instructions">Roll damage dice physically on the table:</p>
+      <div class="physical-prompt-subnote">Leave blank and click Confirm to roll digitally.</div>
+      <div class="physical-damage-pools">
+        {{#each pools as |pool|}}
+        <div class="physical-pool-item" data-pool-id="{{pool.id}}">
+          <div class="physical-pool-header">
+            <span class="physical-pool-type type-{{pool.type}}">{{pool.typeLabel}}</span>
+            <span class="physical-pool-formula">{{pool.formula}}</span>
+            <span class="physical-pool-range">({{pool.min}}–{{pool.max}})</span>
+          </div>
+          <div class="physical-input-row">
+            <button type="button" class="btn-stepper btn-minus" data-action="pool-step" data-pool-id="{{pool.id}}"
+              data-step="-1" title="Decrease">
+              <i class="fa-solid fa-minus"></i>
+            </button>
+            <input type="number" name="pool-{{pool.id}}" class="physical-number-input physical-pool-input"
+              data-pool-id="{{pool.id}}" data-min="{{pool.min}}" data-max="{{pool.max}}" inputmode="numeric"
+              pattern="[0-9]*" min="{{pool.min}}" max="{{pool.max}}" placeholder="{{pool.min}}–{{pool.max}}"
+              autocomplete="off" />
+            <button type="button" class="btn-stepper btn-plus" data-action="pool-step" data-pool-id="{{pool.id}}"
+              data-step="1" title="Increase">
+              <i class="fa-solid fa-plus"></i>
+            </button>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+    </div>
+    {{/if}}
+
+    <div class="physical-error-banner hidden" role="alert"></div>
+
+    <div class="physical-waiting-message hidden">
+      <i class="fa-solid fa-hourglass-half fa-spin"></i>
+      <span>Waiting for {{rollerName}} to enter physical dice roll...</span>
+    </div>
+  </div>
+
+  <footer class="physical-card-actions">
+    <button type="button" class="btn-physical btn-submit" data-action="submit" title="Confirm Roll">
+      <i class="fa-solid fa-check"></i>
+      <span>Confirm</span>
+    </button>
+    <button type="button" class="btn-physical btn-cancel" data-action="cancel" title="Cancel Roll">
+      <i class="fa-solid fa-xmark"></i>
+      <span>Cancel</span>
+    </button>
+  </footer>
+</div>

@@ -1,5 +1,45 @@
 {
-    "PHYSICAL_DICE": {
-        "Title": "Physical Dice"
+  "PHYSICAL_DICE": {
+    "Title": "Physical Dice",
+    "Settings": {
+      "Enabled": {
+        "Name": "Enable Physical Dice",
+        "Hint": "Enables manual physical dice roll."
+      },
+      "RollMode": {
+        "Name": "Default Roll Mode",
+        "Hint": "Choose whether rolls default to physical table dice or digital rolls.",
+        "Physical": "Physical Dice",
+        "Digital": "Digital Dice"
+      },
+      "CleanupMode": {
+        "Name": "Card Resolution Cleanup",
+        "Hint": "Automatically remove or minimize the pending input card once the roll resolves.",
+        "Delete": "Delete pending card",
+        "Minimize": "Minimize pending card"
+      },
+      "AllowGmOverride": {
+        "Name": "Allow GM Entry",
+        "Hint": "Allow the GM to input physical dice results on behalf of players."
+      },
+      "EntryMethod": {
+        "Name": "Prompt Location",
+        "Hint": "Choose whether physical dice numbers are entered via a popup dialog or directly in the chat log (e.g. for GMs who prefer minimal screen clutter).",
+        "Dialog": "Popup Dialog (Default)",
+        "Chat": "In Chat Log"
+      }
+    },
+    "Toggle": {
+      "PhysicalTooltip": "Physical Dice active (Click to switch to Digital)",
+      "DigitalTooltip": "Digital Dice active (Click to switch to Physical)",
+      "SwitchedToPhysical": "Physical Dice mode enabled",
+      "SwitchedToDigital": "Digital Dice mode enabled"
+    },
+    "Prompt": {
+      "RollPhysical": "Roll physically on the table:",
+      "Confirm": "Confirm",
+      "Cancel": "Cancel",
+      "Waiting": "Waiting for {name} to roll physical dice..."
     }
+  }
 }
