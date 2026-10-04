@@ -437,7 +437,8 @@ export class RollPrompt {
    * @returns {string[]} Array of User IDs
    */
   static getWhisperRecipients(options = {}) {
-    const gmUserIds = ChatMessage.getWhisperRecipients("GM").map(u => u.id);
+    // Collect all Game Masters and Assistant GMs (Co-GMs) in the world
+    const gmUserIds = game.users ? game.users.filter(u => u.isGM).map(u => u.id) : [];
     const rollMode = options.rollMode ?? game.settings?.get?.("core", "rollMode") ?? "publicroll";
 
     // 1. Self roll: only visible to the roller
