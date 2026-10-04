@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.3] - 2026-10-04
 
 ### Added
+- **Private Chat Prompt Cards**: Restricted in-chat pending prompt cards so they are visible only to the rolling player and GM (or GM-only when the GM rolls), eliminating chat log clutter and preventing intermediate input cards from broadcasting to unauthorized players.
 - **Cycle & Recursion Guard**: Added `activeStack` tracking and depth ceiling (`depth > 25`) to `extractDiceFromInstance` to prevent infinite loops from circular term references while supporting shared term instances across separate branches.
 
 ### Changed

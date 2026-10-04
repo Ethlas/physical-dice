@@ -428,20 +428,44 @@ export class RollPrompt {
      Chat Mode Internal Handlers & Lifecycle
   ------------------------------------------------------------- */
 
+  /**
+   * Determines whisper recipients for the pending prompt card in chat.
+   * Ensures the prompt card is private to the roller and GM (or GM-only when GM rolls),
+   * preventing intermediate input cards from cluttering other players' chat logs.
+   *
+   * @param {object} [options={}] Roll options
+   * @returns {string[]} Array of User IDs
+   */
   static getWhisperRecipients(options = {}) {
+    const gmUserIds = ChatMessage.getWhisperRecipients("GM").map(u => u.id);
     const rollMode = options.rollMode ?? game.settings?.get?.("core", "rollMode") ?? "publicroll";
-    if (rollMode === "gmroll" || rollMode === "blindroll") {
-      return ChatMessage.getWhisperRecipients("GM").map(u => u.id);
-    }
+
+    // 1. Self roll: only visible to the roller
     if (rollMode === "selfroll") {
       return [game.user.id];
     }
-    return [];
+
+    // 2. If the GM is rolling: visible to GM(s) only
+    if (game.user.isGM) {
+      return gmUserIds.length > 0 ? gmUserIds : [game.user.id];
+    }
+
+    // 3. If a player is rolling: visible ONLY to the player and the GM(s)
+    // Other players at the table never receive or see the intermediate prompt card.
+    return Array.from(new Set([game.user.id, ...gmUserIds]));
   }
 
+  /**
+   * For the pending prompt card in chat, we always return false for blind.
+   * If blind was true, Foundry core would hide the message content from the rolling player!
+   * The prompt is already whispered strictly to the player and GM, so secrecy is maintained.
+   * The final evaluated roll message created upon submission preserves native blind settings.
+   *
+   * @param {object} [options={}]
+   * @returns {boolean}
+   */
   static isBlindRoll(options = {}) {
-    const rollMode = options.rollMode ?? game.settings?.get?.("core", "rollMode") ?? "publicroll";
-    return rollMode === "blindroll";
+    return false;
   }
 
   static async _promptChatCheck(params) {
