@@ -1,6 +1,7 @@
 {
   "PHYSICAL_DICE": {
     "Title": "Physical Dice",
+    "RollCancelled": "Roll cancelled.",
     "Settings": {
       "Enabled": {
         "Name": "Enable Physical Dice",
@@ -39,7 +40,8 @@
       "RollPhysical": "Roll physically on the table:",
       "Confirm": "Confirm",
       "Cancel": "Cancel",
-      "Waiting": "Waiting for {name} to roll physical dice..."
+      "Waiting": "Waiting for {name} to roll physical dice...",
+      "RollCancelled": "Roll cancelled."
     }
   }
 }

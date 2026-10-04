@@ -479,10 +479,14 @@ export function setupPhysicalDiceInterceptor() {
           } catch (err) {
             if (err?.isPhysicalRollCancelled) {
               console.log("Physical Dice | Roll cancelled by user.");
-              // Mark roll as cancelled and evaluated so no secondary caller triggers evaluate()
               this._isPhysicalCancelled = true;
-              this._evaluated = true;
-              return this;
+              if (Array.isArray(this.instances)) {
+                for (const inst of this.instances) {
+                  inst._isPhysicalCancelled = true;
+                }
+              }
+              ui.notifications?.info(game.i18n?.localize("PHYSICAL_DICE.RollCancelled") || "Roll cancelled.");
+              throw err;
             }
             throw err;
           }
@@ -495,6 +499,43 @@ export function setupPhysicalDiceInterceptor() {
         configurable: true
       });
     }
+  }
+
+  // Intercept Roll.prototype.toMessage to suppress chat output for cancelled rolls
+  if (globalThis.Roll?.prototype && !globalThis.Roll.prototype.hasOwnProperty("_physicalToMessagePatched")) {
+    const origToMessage = globalThis.Roll.prototype.toMessage;
+    globalThis.Roll.prototype.toMessage = async function (messageData = {}, options = {}) {
+      if (this._isPhysicalCancelled) {
+        console.log("Physical Dice | Suppressing toMessage for cancelled physical roll.");
+        return null;
+      }
+      return origToMessage.call(this, messageData, options);
+    };
+    Object.defineProperty(globalThis.Roll.prototype, "_physicalToMessagePatched", {
+      value: true,
+      writable: false,
+      configurable: true
+    });
+  }
+
+  // Intercept ChatLog.prototype.processMessage to cleanly abort chat slash commands (/r 1d20) when cancelled
+  if (globalThis.ChatLog?.prototype && !globalThis.ChatLog.prototype.hasOwnProperty("_physicalChatLogPatched")) {
+    const origProcessMessage = globalThis.ChatLog.prototype.processMessage;
+    globalThis.ChatLog.prototype.processMessage = async function (message, options = {}) {
+      try {
+        return await origProcessMessage.call(this, message, options);
+      } catch (err) {
+        if (err?.isPhysicalRollCancelled) {
+          return null;
+        }
+        throw err;
+      }
+    };
+    Object.defineProperty(globalThis.ChatLog.prototype, "_physicalChatLogPatched", {
+      value: true,
+      writable: false,
+      configurable: true
+    });
   }
 
   console.log("Physical Dice | Roll evaluation interceptor active.");

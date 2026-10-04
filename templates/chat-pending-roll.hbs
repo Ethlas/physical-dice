@@ -17,7 +17,12 @@
   </header>
 
   <div class="physical-card-body">
-    {{#if isCheck}}
+    {{#if isCancelled}}
+    <div class="physical-cancelled-badge">
+      <i class="fa-solid fa-ban"></i>
+      <span>Roll cancelled</span>
+    </div>
+    {{else if isCheck}}
     <div class="physical-check-prompt">
       <p class="physical-instructions">
         {{#if isFortune}}
@@ -93,6 +98,7 @@
     </div>
   </div>
 
+  {{#unless isCancelled}}
   <footer class="physical-card-actions">
     <button type="button" class="btn-physical btn-submit" data-action="submit" title="Confirm Roll">
       <i class="fa-solid fa-check"></i>
@@ -103,4 +109,5 @@
       <span>Cancel</span>
     </button>
   </footer>
+  {{/unless}}
 </div>

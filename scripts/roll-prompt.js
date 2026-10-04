@@ -778,7 +778,7 @@ export class RollPrompt {
       this.pendingChatRolls.delete(messageId);
       entry.reject(new PhysicalRollCancelledError("Physical roll cancelled by user."));
     }
-    await this.cleanupPendingMessage(messageId);
+    await this.cleanupPendingMessage(messageId, true);
   }
 
   static onPreCreateChatMessage(messageDoc, messageData, options, userId) {
@@ -791,7 +791,7 @@ export class RollPrompt {
     }
   }
 
-  static async cleanupPendingMessage(messageId) {
+  static async cleanupPendingMessage(messageId, isCancelled = false) {
     this.pendingChatRolls.delete(messageId);
     const message = game.messages?.get(messageId);
     if (!message) return;
@@ -810,10 +810,22 @@ export class RollPrompt {
 
     try {
       if (message.isOwner || game.user.isGM) {
-        await message.update({
+        const updateData = {
           [`flags.${MODULE_ID}.isPending`]: false,
           [`flags.${MODULE_ID}.isCompleted`]: true
-        });
+        };
+        if (isCancelled) {
+          updateData[`flags.${MODULE_ID}.isCancelled`] = true;
+          try {
+            const cardData = message.flags?.[MODULE_ID]?.cardData ?? {};
+            const html = await renderTemplate(
+              "modules/physical-dice/templates/chat-pending-roll.hbs",
+              { ...cardData, isCancelled: true }
+            );
+            updateData.content = html;
+          } catch {}
+        }
+        await message.update(updateData);
       }
     } catch {}
   }

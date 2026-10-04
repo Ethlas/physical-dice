@@ -847,3 +847,35 @@
   border-color: var(--m-border-strong);
   color: var(--m-text-strong);
 }
+
+/* -------------------------------------------------------------
+   Cancelled & Settled States (In-Chat Card)
+------------------------------------------------------------- */
+.physical-dice-pending-card.physical-cancelled,
+.physical-dice-pending-card.physical-settled {
+  border-color: var(--m-border-subtle) !important;
+  border-top-color: var(--m-border-subtle) !important;
+  box-shadow: none !important;
+  opacity: 0.65;
+  filter: grayscale(0.4);
+}
+
+.physical-cancelled-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  color: var(--m-misfortune);
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--m-hue-danger) 12%, var(--m-surface-0));
+  border: 1px dashed color-mix(in srgb, var(--m-hue-danger) 35%, transparent);
+  border-radius: 6px;
+  margin: 4px 0;
+}
+
+.physical-dice-pending-card.physical-settled .btn-physical,
+.physical-dice-pending-card.physical-cancelled .btn-physical {
+  display: none !important;
+}

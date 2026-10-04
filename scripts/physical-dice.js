@@ -40,6 +40,13 @@ Hooks.once("ready", function () {
   // Inject toggle button into chat controls and setup DOM persistence observer
   ChatControlsToggle.inject();
   ChatControlsToggle.setupObserver();
+
+  // Suppress unhandled promise rejection warnings when physical rolls are aborted by the user
+  window.addEventListener("unhandledrejection", (event) => {
+    if (event.reason?.isPhysicalRollCancelled) {
+      event.preventDefault();
+    }
+  });
 });
 
 // Bind interactive UI listeners to pending physical roll cards in chat

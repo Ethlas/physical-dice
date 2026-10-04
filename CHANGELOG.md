@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.1.4] - 2026-10-04
+
+### Fixed
+- **Clean Roll Cancellation**: Properly aborts roll execution on cancellation, re-throwing `PhysicalRollCancelledError` through `withPhysicalMode` and suppressing `toMessage` output to prevent false Critical Success chat messages with 0 total.
+- **Cancelled Chat Card State**: Updated in-chat pending roll cards to show a "Roll cancelled" badge and disable action buttons upon cancellation.
+- **Localized Cancel Toast**: Emits a localized `"Roll cancelled."` info toast when the user aborts a physical roll.
+
 ## [0.1.3] - 2026-10-04
 
 ### Added
