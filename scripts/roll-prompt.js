@@ -78,8 +78,27 @@ class RollPromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   /** @override */
+  _initializePosition(options) {
+    const position = super._initializePosition ? super._initializePosition(options) : {};
+    const isMobile = window.innerWidth <= 768 || window.innerHeight <= 800 || window.matchMedia?.("(pointer: coarse)").matches;
+    if (isMobile) {
+      position.top = Math.max(8, Math.round(window.innerHeight * 0.02));
+      const width = Math.min(position.width ?? 400, window.innerWidth - 16);
+      position.width = width;
+      position.left = Math.max(8, Math.round((window.innerWidth - width) / 2));
+    }
+    return position;
+  }
+
+  /** @override */
   _onRender(context, options) {
     super._onRender(context, options);
+
+    // Tag mobile viewports for CSS top-anchoring above virtual keyboard
+    const isMobile = window.innerWidth <= 768 || window.innerHeight <= 800 || window.matchMedia?.("(pointer: coarse)").matches;
+    if (isMobile && this.element) {
+      this.element.classList.add("is-mobile");
+    }
 
     const errorEl = this.element?.querySelector(".physical-error-msg");
     const clearError = () => {
@@ -96,7 +115,7 @@ class RollPromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
         try {
           firstInput.focus();
           firstInput.select();
-        } catch {}
+        } catch { }
       }, 50);
     }
 
@@ -378,7 +397,7 @@ export class RollPrompt {
     if (RollPromptDialog.activeApp) {
       try {
         RollPromptDialog.activeApp.close();
-      } catch {}
+      } catch { }
     }
 
     return new Promise((resolve, reject) => {
@@ -403,7 +422,7 @@ export class RollPrompt {
     if (RollPromptDialog.activeApp) {
       try {
         RollPromptDialog.activeApp.close();
-      } catch {}
+      } catch { }
     }
 
     return new Promise((resolve, reject) => {
@@ -650,7 +669,7 @@ export class RollPrompt {
         try {
           firstInput.focus();
           firstInput.select();
-        } catch {}
+        } catch { }
       }, 50);
     }
 
@@ -823,10 +842,10 @@ export class RollPrompt {
               { ...cardData, isCancelled: true }
             );
             updateData.content = html;
-          } catch {}
+          } catch { }
         }
         await message.update(updateData);
       }
-    } catch {}
+    } catch { }
   }
 }

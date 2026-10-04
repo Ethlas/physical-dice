@@ -620,6 +620,52 @@
   padding: 12px 14px !important;
 }
 
+/* Mobile & Touch Top-Anchoring: Pin to top so virtual keyboard never occludes inputs */
+@media (max-width: 768px), (max-height: 800px), (pointer: coarse) and (max-width: 1024px) {
+  .physical-dice-dialog-app {
+    top: calc(env(safe-area-inset-top, 0px) + 8px) !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    margin: 0 !important;
+    width: min(calc(100vw - 16px), 400px) !important;
+    max-height: calc(100dvh - 16px) !important;
+    box-sizing: border-box !important;
+  }
+
+  .physical-dice-dialog-app .window-content {
+    max-height: calc(100dvh - 56px) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .physical-dice-dialog-content {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .physical-die-input {
+    height: 48px;
+    min-height: 48px;
+    font-size: 1.75rem;
+  }
+}
+
+.physical-dice-dialog-app.is-mobile {
+  top: calc(env(safe-area-inset-top, 0px) + 8px) !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  margin: 0 !important;
+  width: min(calc(100vw - 16px), 400px) !important;
+  max-height: calc(100dvh - 16px) !important;
+  box-sizing: border-box !important;
+}
+
+.physical-dice-dialog-app.is-mobile .window-content {
+  max-height: calc(100dvh - 56px) !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
 .physical-dice-dialog-content {
   display: flex;
   flex-direction: column;
