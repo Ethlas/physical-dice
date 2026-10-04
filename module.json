@@ -1,0 +1,36 @@
+{
+  "id": "physical-dice",
+  "title": "Physical Dice",
+  "description": "Seamless manual dice roll entry for Foundry Virtual Tabletop.",
+  "version": "0.1.0",
+  "compatibility": {
+    "minimum": "14",
+    "verified": "14"
+  },
+  "authors": [
+    {
+      "name": "Ethlas",
+      "url": "https://github.com/Ethlas"
+    }
+  ],
+  "esmodules": [
+    "scripts/physical-dice.js"
+  ],
+  "styles": [
+    "styles/physical-dice.css"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ],
+  "url": "https://github.com/Ethlas/physical-dice",
+  "manifest": "https://github.com/Ethlas/physical-dice/releases/latest/download/module.json",
+  "download": "https://github.com/Ethlas/physical-dice/releases/latest/download/physical-dice.zip",
+  "readme": "README.md",
+  "license": "LICENSE",
+  "bugs": "https://github.com/Ethlas/physical-dice/issues",
+  "changelog": "https://github.com/Ethlas/physical-dice/releases"
+}
