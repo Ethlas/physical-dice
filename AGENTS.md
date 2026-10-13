@@ -43,6 +43,12 @@ Welcome to the **Physical Dice** repository (`physical-dice`). This is a Foundry
    - Never commit or store plaintext passwords or tokens in repository files.
    - For every feature milestone, bug fix, or breaking change, document the change in `CHANGELOG.md`.
    - Bump version in [`module.json`](file:///d:/Dnd/coding/physical-dice/module.json) when releasing new milestone versions.
+3. **Issue -> Branch -> PR Workflow (No Direct Commits/Merges to `main`)**:
+   - Every change must trace to a tracked GitHub issue (`gh issue create`).
+   - Create a dedicated branch (`fix/#<id>-<desc>` or `feat/#<id>-<desc>`) from clean `main`.
+   - All changes must be merged via Pull Request (`gh pr create`).
+   - **Direct commits or direct merges to `main` are strictly prohibited.**
+   - Follow the [`issue-branch-pr-flow`](file:///.agents/skills/issue-branch-pr-flow/SKILL.md) skill.
 
 ---
 

@@ -519,9 +519,12 @@ export function setupPhysicalDiceInterceptor() {
   }
 
   // Intercept ChatLog.prototype.processMessage to cleanly abort chat slash commands (/r 1d20) when cancelled
-  if (globalThis.ChatLog?.prototype && !globalThis.ChatLog.prototype.hasOwnProperty("_physicalChatLogPatched")) {
-    const origProcessMessage = globalThis.ChatLog.prototype.processMessage;
-    globalThis.ChatLog.prototype.processMessage = async function (message, options = {}) {
+  const ChatLogCls = foundry.applications?.sidebar?.tabs?.ChatLog
+    ?? ui?.chat?.constructor
+    ?? (typeof globalThis.ChatLog !== "undefined" ? globalThis.ChatLog : undefined);
+  if (ChatLogCls?.prototype && !Object.prototype.hasOwnProperty.call(ChatLogCls.prototype, "_physicalChatLogPatched")) {
+    const origProcessMessage = ChatLogCls.prototype.processMessage;
+    ChatLogCls.prototype.processMessage = async function (message, options = {}) {
       try {
         return await origProcessMessage.call(this, message, options);
       } catch (err) {
@@ -531,7 +534,7 @@ export function setupPhysicalDiceInterceptor() {
         throw err;
       }
     };
-    Object.defineProperty(globalThis.ChatLog.prototype, "_physicalChatLogPatched", {
+    Object.defineProperty(ChatLogCls.prototype, "_physicalChatLogPatched", {
       value: true,
       writable: false,
       configurable: true
