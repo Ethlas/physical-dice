@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+- **Issue -> Branch -> PR Workflow Skill**: Added repository skill (`issue-branch-pr-flow`) and guidelines in `AGENTS.md` enforcing that every change follows an Issue -> Branch -> PR lifecycle with no direct merges to `main` (#2).
+
+### Fixed
+- **Foundry v13/v14 ChatLog Deprecation**: Resolved compatibility warning by referencing namespaced `foundry.applications.sidebar.tabs.ChatLog` (falling back to `ui.chat.constructor`) instead of accessing deprecated global `ChatLog` (#2).
+
 ## [0.1.4] - 2026-10-04
 
 ### Fixed
