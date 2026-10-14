@@ -37,13 +37,20 @@ Welcome to the **Physical Dice** repository (`physical-dice`). This is a Foundry
 ## 3. Workflow & Deployment Rules
 
 1. **Syntax & Quality Checks**:
-   - Verify JSON and JavaScript syntax before committing or pushing changes.
-2. **Approval & Documentation Integrity**:
+   - Run `node scripts/verify.mjs` before committing or pushing changes to verify JavaScript syntax, Handlebars template integrity, and CSS brace balance.
+2. **Semantic Versioning & Releases**:
+   - Use the `version-manager` skill ([`.agents/skills/version-manager/SKILL.md`](file:///.agents/skills/version-manager/SKILL.md)) or `node scripts/bump-version.mjs <type>`:
+     - **Bug Fix**: update 3rd number (`MAJOR.MINOR.PATCH + 1`, e.g. `1.0.0` -> `1.0.1`).
+     - **Feature**: update middle number (`MAJOR.MINOR + 1.0`) and reset 3rd number to 0 (e.g. `1.0.0` -> `1.1.0`).
+     - **Full New Version**: update 1st number (`MAJOR + 1.0.0`) and reset middle and 3rd numbers to 0 (e.g. `1.0.0` -> `2.0.0`).
+   - Document changes in [`CHANGELOG.md`](file:///CHANGELOG.md).
+   - Packaging and GitHub Releases are automated via [`.github/workflows/release.yml`](file:///.github/workflows/release.yml) upon pushing a `v*` tag.
+3. **Approval & Documentation Integrity**:
    - **NEVER commit or push to Git/GitHub without explicit user approval.**
    - Never commit or store plaintext passwords or tokens in repository files.
    - For every feature milestone, bug fix, or breaking change, document the change in `CHANGELOG.md`.
-   - Bump version in [`module.json`](file:///d:/Dnd/coding/physical-dice/module.json) when releasing new milestone versions.
-3. **Issue -> Branch -> PR Workflow (No Direct Commits/Merges to `main`)**:
+   - Bump version in [`module.json`](file:///module.json) when releasing new milestone versions.
+4. **Issue -> Branch -> PR Workflow (No Direct Commits/Merges to `main`)**:
    - Every change must trace to a tracked GitHub issue (`gh issue create`).
    - Create a dedicated branch (`fix/#<id>-<desc>` or `feat/#<id>-<desc>`) from clean `main`.
    - All changes must be merged via Pull Request (`gh pr create`).
