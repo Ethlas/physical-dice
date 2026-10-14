@@ -7,10 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [1.0.0] - 2026-10-14
 
 ### Added
-- **Issue -> Branch -> PR Workflow Skill**: Added repository skill (`issue-branch-pr-flow`) and guidelines in `AGENTS.md` enforcing that every change follows an Issue -> Branch -> PR lifecycle with no direct merges to `main` (#2).
+- **GitHub Actions Release & Packaging Workflow**: Implemented automated release pipeline (`.github/workflows/release.yml`) triggered on tag pushes (`v*`) and manual dispatch. Staged packages include only pure runtime assets (`module.json`, `scripts/`, `styles/`, `templates/`, `lang/`, `README.md`, `LICENSE`), automatically stripping dev scripts, `.agents`, `AGENTS.md`, and changelogs (#4).
+- **Semantic Version Manager Tooling & Skill**: Introduced `scripts/bump-version.mjs` and `.agents/skills/version-manager` adhering strictly to SemVer:
+  - **Bug Fix**: updates 3rd number (e.g. `1.0.0` -> `1.0.1`).
+  - **Feature**: updates middle number and resets 3rd to 0 (e.g. `1.0.0` -> `1.1.0`).
+  - **Full New Version**: updates 1st number and resets middle and 3rd to 0 (e.g. `1.0.0` -> `2.0.0`).
+- **Static Verification Test Suite**: Added `scripts/verify.mjs` running automated pre-flight checks on JavaScript ESM module trees, Handlebars template syntax, CSS block balance, and `module.json` manifest structure (#4).
+- **Comprehensive Mobile & Functional Documentation**: Completely overhauled `README.md` with dedicated mobile usage instructions, touch ergonomics, ASCII UI mockups for all prompt variants, step-by-step resolution flow, and settings reference (#4).
+- **Issue -> Branch -> PR Workflow Skill**: Added repository skill (`issue-branch-pr-flow`) and guidelines in `AGENTS.md` enforcing that every change follows an Issue -> Branch -> PR lifecycle with no direct merges to `main` (#2, #4).
 
 ### Fixed
 - **Foundry v13/v14 ChatLog Deprecation**: Resolved compatibility warning by referencing namespaced `foundry.applications.sidebar.tabs.ChatLog` (falling back to `ui.chat.constructor`) instead of accessing deprecated global `ChatLog` (#2).
