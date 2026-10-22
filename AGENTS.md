@@ -37,19 +37,21 @@ Welcome to the **Physical Dice** repository (`physical-dice`). This is a Foundry
 ## 3. Workflow & Deployment Rules
 
 1. **Syntax & Quality Checks**:
-   - Run `node scripts/verify.mjs` before committing or pushing changes to verify JavaScript syntax, Handlebars template integrity, and CSS brace balance.
-2. **Semantic Versioning & Releases**:
-   - Use the `version-manager` skill ([`.agents/skills/version-manager/SKILL.md`](file:///.agents/skills/version-manager/SKILL.md)) or `node scripts/bump-version.mjs <type>`:
-     - **Bug Fix**: update 3rd number (`MAJOR.MINOR.PATCH + 1`, e.g. `1.0.0` -> `1.0.1`).
-     - **Feature**: update middle number (`MAJOR.MINOR + 1.0`) and reset 3rd number to 0 (e.g. `1.0.0` -> `1.1.0`).
-     - **Full New Version**: update 1st number (`MAJOR + 1.0.0`) and reset middle and 3rd numbers to 0 (e.g. `1.0.0` -> `2.0.0`).
-   - Document changes in [`CHANGELOG.md`](file:///CHANGELOG.md).
-   - Packaging and GitHub Releases are automated via [`.github/workflows/release.yml`](file:///.github/workflows/release.yml) upon pushing a `v*` tag.
+   - Run `npm ci` once to install the dev tooling (`semver`, `yazl`; dev dependencies only, nothing ships in the module).
+   - Run `node scripts/verify.mjs` before committing or pushing changes to verify JavaScript syntax, Handlebars template integrity, and CSS brace balance. CI runs the same check on every PR ([`.github/workflows/ci-verify.yml`](file:///.github/workflows/ci-verify.yml)), and `release.yml` runs it before packaging.
+   - **Release tooling lives in `scripts/*.mjs`** and is never packaged (runtime code is `.js`): `release-check.mjs` (release gate in `release.yml`), `build.mjs` (stages `dist/package/`, writes `dist/module.json` and `dist/module.zip`; run it locally to test a package), and the shared `release-utils.mjs`.
+2. **Semantic Versioning & Releases ([Conventional Commits v1.0.0](https://www.conventionalcommits.org/en/v1.0.0/))**:
+   - Only a `fix` or `feat` prefix on the **PR title** (or, for a direct push without a PR, the commit subject) triggers module packaging in [`.github/workflows/release.yml`](file:///.github/workflows/release.yml) when merged into `main`. The prefixes of the commits inside a PR don't count. PR titles are not enforced by CI: a PR without one of these prefixes merges fine but does not release.
+   - **The version is automatic**: the release takes the highest `vX.Y.Z` tag and raises it by the prefix (see the `version-manager` skill, [`.agents/skills/version-manager/SKILL.md`](file:///.agents/skills/version-manager/SKILL.md)). Never edit the version by hand: the `module.json` version in the repository is `0.0.0-dev`, for development checkouts only, and the release writes the computed version into the packaged manifest.
+     - **`fix:` (Bug Fix / Patch)**: 3rd number (e.g. `1.0.0` -> `1.0.1`).
+     - **`feat:` (Feature / Minor)**: middle number, 3rd number reset to 0 (e.g. `1.0.0` -> `1.1.0`).
+     - **`feat!:` / `fix!:` (Breaking / Major)**: 1st number, middle and 3rd numbers reset to 0 (e.g. `1.0.0` -> `2.0.0`).
+   - Document changes in [`CHANGELOG.md`](file:///CHANGELOG.md) under the `## [Unreleased]` heading; GitHub's generated release notes list the merged PRs per version.
+   - **After a release**, rename `## [Unreleased]` to the released version and date (e.g. `## [1.0.1] - 2026-10-23`, from the release's `vX.Y.Z` tag) in a `docs(changelog):` PR, and start a new empty `## [Unreleased]` above it. The release workflow does not edit the changelog.
 3. **Approval & Documentation Integrity**:
    - **NEVER commit or push to Git/GitHub without explicit user approval.**
    - Never commit or store plaintext passwords or tokens in repository files.
    - For every feature milestone, bug fix, or breaking change, document the change in `CHANGELOG.md`.
-   - Bump version in [`module.json`](file:///module.json) when releasing new milestone versions.
 4. **Issue -> Branch -> PR Workflow (No Direct Commits/Merges to `main`)**:
    - Every change must trace to a tracked GitHub issue (`gh issue create`).
    - Create a dedicated branch (`fix/#<id>-<desc>` or `feat/#<id>-<desc>`) from clean `main`.

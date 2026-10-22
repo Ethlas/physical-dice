@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+- **PR verification**: new `.github/workflows/ci-verify.yml` runs `node scripts/verify.mjs` on every PR to `main`. `release.yml` calls it as its `verify` job (reusable workflow) and only packages when it passes, so a broken change is caught before merge instead of at release time.
+
+### Changed
+- **The version comes from the tags**: merging a `fix:` or `feat:` PR into `main` releases the highest `vX.Y.Z` tag raised by the prefix (`fix` -> patch, `feat` -> minor, `!` -> major). `scripts/bump-version.mjs` is removed, and the repository's `module.json` version is `0.0.0-dev`, for development checkouts only; the release writes the computed version into the packaged manifest.
+- **Releases only on merge to `main`**: the `v*` tag push and manual (`workflow_dispatch`) triggers are removed. A manual run built the selected branch, not the given tag, so it could overwrite an earlier release's files with newer code.
+- **Packaging in Node**: `scripts/build.mjs` replaces the `cp`/`rm`/`zip` steps (dev dependencies `semver` and `yazl` in a new `package.json` and `package-lock.json`, which is no longer git-ignored), so a release package can also be built locally, on Windows too. Every `.mjs` file in `scripts/` is tooling and stays out of `module.zip`. The duplicate `physical-dice.zip` release asset is dropped; the manifest has always pointed to `module.zip`.
+
+---
+
 ## [1.0.0] - 2026-10-14
 
 ### Added

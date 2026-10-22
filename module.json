@@ -2,7 +2,7 @@
   "id": "physical-dice",
   "title": "Physical Dice",
   "description": "Seamless manual dice roll entry for Foundry Virtual Tabletop.",
-  "version": "1.0.0",
+  "version": "0.0.0-dev",
   "compatibility": {
     "minimum": "14",
     "verified": "14"
