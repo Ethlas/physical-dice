@@ -75,7 +75,7 @@ git checkout -b fix/#<ISSUE_ID>-<short-description>
    Get-ChildItem -Path scripts -Filter *.js -Recurse | ForEach-Object { node -c $_.FullName }
    ```
 3. **Update `CHANGELOG.md`**: Add an entry under `## [Unreleased]` describing the fix or feature.
-4. **Version Bump (if releasing milestone)**: Update `"version"` in [`module.json`](file:///d:/Dnd/coding/physical-dice/module.json).
+4. **No Version Bump**: Don't edit the `module.json` version. A `fix`/`feat` PR title releases on merge, with the version computed from the latest `v` tag (see the `version-manager` skill).
 
 ### 4. Stage and Review with User
 

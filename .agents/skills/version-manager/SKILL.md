@@ -1,75 +1,64 @@
 ---
 name: version-manager
 description: >-
-  Use this skill to manage module versions (bug fix, feature, or full new version), update module.json and CHANGELOG.md, run verifications, and trigger GitHub releases.
+  Use this skill to pick the Conventional Commit prefix that sets a release's version (bug fix, feature, or full new version), update CHANGELOG.md, run verifications, and trigger GitHub releases.
 ---
 
 # Semantic Version Manager Skill
 
-This skill defines the procedure for updating the version of `physical-dice`, keeping documentation synchronized, verifying integrity, and packaging releases for Foundry Virtual Tabletop.
+This skill defines how releases of `physical-dice` get their version, keeping documentation synchronized, verifying integrity, and packaging releases for Foundry Virtual Tabletop.
 
 ---
 
-## 1. Semantic Versioning Rules (Crucial)
+## 1. Conventional Commits v1.0.0 & Semantic Versioning Rules (Crucial)
 
-The module version in [`module.json`](file:///d:/Dnd/coding/physical-dice/module.json) follows the `MAJOR.MINOR.PATCH` format (e.g., `1.0.0`).
-
-Always apply the following rules when determining the next version number:
-
-1. **Bug Fix (Patch)**:
-   - **Update the 3rd number** (`MAJOR.MINOR.PATCH + 1`).
-   - Example: `1.0.0` -> `1.0.1`.
-   - Use for bug fixes, edge case corrections, CSS/styling fixes, typo corrections, or minor internal refactors that do not add new functionality.
-
-2. **Feature (Minor)**:
-   - **Update the middle number** (`MAJOR.MINOR + 1.0`) and **reset the 3rd number to 0**.
-   - Example: `1.0.0` -> `1.1.0`.
-   - Use for new user-facing features, new prompt mechanics, new dialogs, new subsystem integrations (e.g. mobile sheets, sound cues), or backwards-compatible enhancements.
-
-3. **Full New Version (Major)**:
-   - **Update the 1st number** (`MAJOR + 1.0.0`) and **reset the middle and 3rd numbers to 0**.
-   - Example: `1.0.0` -> `2.0.0`.
-   - Use for full new version milestones, major architectural redesigns, breaking API changes, or major Foundry VTT core upgrades (e.g. migrating from Foundry v14 to v15).
-
----
-
-## 2. Automated Version Bump Command
-
-Use the built-in CLI script to calculate versions, update manifests, format the changelog, and run tests automatically:
-
-```bash
-# For a bug fix (updates 3rd number)
-node scripts/bump-version.mjs bugfix "Brief description of fix"
-
-# For a feature (updates middle number)
-node scripts/bump-version.mjs feature "Brief description of feature"
-
-# For a full new version (updates 1st number)
-node scripts/bump-version.mjs full "Brief description of major milestone"
-
-# To set an explicit version (e.g. 1.0.0 milestone)
-node scripts/bump-version.mjs set 1.0.0 "Initial stable release"
+Pull Request titles follow the **[Conventional Commits v1.0.0](https://www.conventionalcommits.org/en/v1.0.0/)** specification:
+```text
+<type>[optional scope][!]: <description>
 ```
 
-### What `bump-version.mjs` Performs:
-1. Validates the current version in [`module.json`](file:///d:/Dnd/coding/physical-dice/module.json).
-2. Calculates the new version based on the specified release type.
-3. Updates `module.json`'s `"version"` field.
-4. Prepends a draft entry with today's date in [`CHANGELOG.md`](file:///d:/Dnd/coding/physical-dice/CHANGELOG.md).
-5. Runs the automated verification suite (`node scripts/verify.mjs`).
-6. Outputs exact git release commands.
+Versions follow the `MAJOR.MINOR.PATCH` format (e.g., `1.0.0`) and are **computed automatically** when a PR is merged: the release takes the highest `vX.Y.Z` tag and raises it by the PR title's prefix (or, for a direct push without a PR, the commit subject's; the prefixes of the commits inside a PR don't count). Never edit the version by hand: the `module.json` version in the repository is `0.0.0-dev`, for development checkouts only, and the release writes the computed version into the packaged manifest.
+**Only `fix` and `feat` Pull Requests package a new Foundry module release when merged into `main`:**
+
+1. **`fix:` — Bug Fix (Patch)**:
+   - **Raises the 3rd number** (`MAJOR.MINOR.PATCH + 1`).
+   - Example: `1.0.0` -> `1.0.1` (`fix(#2): resolve ChatLog deprecation in Foundry v14`).
+   - Use for bug fixes, edge case corrections, CSS/styling fixes, typo corrections, or regressions.
+
+2. **`feat:` — Feature (Minor)**:
+   - **Raises the middle number** (`MAJOR.MINOR + 1.0`) and **resets the 3rd number to 0**.
+   - Example: `1.0.0` -> `1.1.0` (`feat(#4): add release packaging workflow`).
+   - Use for new user-facing features, new prompt mechanics, new dialogs, new subsystem integrations (e.g. mobile sheets, sound cues), or backwards-compatible enhancements.
+
+3. **`feat!:` or `fix!:` — Full New Version (Major / Breaking)**:
+   - **Raises the 1st number** (`MAJOR + 1.0.0`) and **resets the middle and 3rd numbers to 0**.
+   - Example: `1.1.0` -> `2.0.0` (`feat!: migrate to Foundry v15`).
+   - Use for full new version milestones, major architectural redesigns, breaking API changes, or major Foundry VTT core upgrades.
+
+4. **Non-Release Types (`docs:`, `ci:`, `chore:`, `style:`, `refactor:`, `perf:`, `test:`, `build:`, `revert:`)**:
+   - Used for documentation, CI workflow updates, internal refactors, or test suite additions.
+   - Do **not** package a new release when merged. PR titles are not enforced: a PR with any other title merges fine and just doesn't release.
+
+---
+
+## 2. Changelog
+
+Add an entry for every `fix` or `feat` change to [`CHANGELOG.md`](file:///d:/Dnd/coding/physical-dice/CHANGELOG.md) under the `## [Unreleased]` heading at the top. The version isn't known until the PR is merged; GitHub's generated release notes list the merged PRs per version.
+
+After a release, rename `## [Unreleased]` to the released version and date (e.g. `## [1.0.1] - 2026-10-23`, from the release's `vX.Y.Z` tag) in a `docs(changelog):` PR, and start a new empty `## [Unreleased]` above it. The release workflow does not edit the changelog.
 
 ---
 
 ## 3. Verification & Quality Assurance
 
-Before committing or releasing any version:
-1. Always run static and interactive verifications:
+Before committing or opening a PR:
+1. Install the dev tooling once with `npm ci`, then always run static and interactive verifications:
    ```bash
    node scripts/verify.mjs
    ```
 2. Check that all tests pass with 0 errors and 0 warnings.
-3. Ensure [`CHANGELOG.md`](file:///d:/Dnd/coding/physical-dice/CHANGELOG.md) accurately documents the changes and lists affected files.
+3. To test the release package locally, run `node scripts/build.mjs` and inspect `dist/module.zip`.
+4. For `fix:` and `feat:` PRs, ensure [`CHANGELOG.md`](file:///d:/Dnd/coding/physical-dice/CHANGELOG.md) accurately documents the changes and lists affected files.
 
 ---
 
@@ -78,23 +67,11 @@ Before committing or releasing any version:
 > [!WARNING]
 > **NEVER commit, tag, or push to Git/GitHub without explicit user approval.** Always show the proposed changes and ask the user before running git push commands. Follow the [`issue-branch-pr-flow`](file:///d:/Dnd/coding/physical-dice/.agents/skills/issue-branch-pr-flow/SKILL.md) skill.
 
-Once the user authorizes the release:
-1. Stage and commit the updated version files on the issue feature branch:
-   ```bash
-   git add module.json CHANGELOG.md
-   git commit -m "Release vX.Y.Z: <Summary>"
-   ```
-2. Push the branch, open a Pull Request, and merge to `main`.
-3. Once on `main`:
-   ```bash
-   git tag vX.Y.Z
-   git push origin vX.Y.Z
-   ```
+Once the user authorizes it, push the issue branch and open a Pull Request with a Conventional Commits title (`<type>(#<ISSUE_ID>): <summary>`). No tag is pushed by hand: the release creates it.
 
-### Automated GitHub Release Action
-Pushing the `vX.Y.Z` tag automatically triggers the GitHub Actions workflow [`.github/workflows/release.yml`](file:///d:/Dnd/coding/physical-dice/.github/workflows/release.yml):
-- Verifies code integrity via `node scripts/verify.mjs`.
-- Whitelists only runtime assets (`module.json`, `README.md`, `LICENSE`, `lang/`, `scripts/`, `styles/`, `templates/`).
-- Excludes development files (`.agents`, `AGENTS.md`, `CHANGELOG.md`, `deploy.ps1`, `run-verify.ps1`, `scratch/`, `docs/`, `tests/`, `verify.mjs`, `bump-version.mjs`).
-- Creates `physical-dice.zip` and `module.zip`, updating the release manifest `module.json`.
-- Attaches the release archive and `module.json` to the official GitHub Release for instant Foundry VTT auto-updates!
+### Automated GitHub Verification & Release Actions
+- **On Pull Request ([`.github/workflows/ci-verify.yml`](file:///d:/Dnd/coding/physical-dice/.github/workflows/ci-verify.yml))**: runs `node scripts/verify.mjs`.
+- **On Merge to `main` ([`.github/workflows/release.yml`](file:///d:/Dnd/coding/physical-dice/.github/workflows/release.yml))**:
+  - First runs `ci-verify.yml` as its `verify` job (a reusable workflow, via `workflow_call`); packaging only starts when it passes.
+  - Runs `node scripts/release-check.mjs`, which checks whether the merged PR title (or the commit subject) has a `fix` or `feat` Conventional Commit prefix, and computes the version from the highest `vX.Y.Z` tag. A commit that already has a `v` tag is not released again.
+  - **Only when `fix` or `feat` is present**: packages runtime assets with `node scripts/build.mjs` (`module.json`, `README.md`, `LICENSE`, `lang/`, `scripts/` without its `.mjs` tooling, `styles/`, `templates/`), and creates the `vX.Y.Z` tag and GitHub Release with `module.zip` and `module.json` for Foundry VTT auto-updates.
