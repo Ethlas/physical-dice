@@ -26,13 +26,15 @@
     <div class="physical-check-prompt">
       <p class="physical-instructions">
         {{#if isFortune}}
-        <i class="fa-solid fa-clover text-fortune"></i> <strong>Fortune:</strong> Roll 2d{{faces}} physically and enter
+        <i class="fa-solid fa-clover text-fortune"></i> <strong>Fortune:</strong> Roll {{count}}d{{faces}} physically and enter
         the <em>higher</em> result:
         {{else if isMisfortune}}
-        <i class="fa-solid fa-skull text-misfortune"></i> <strong>Misfortune:</strong> Roll 2d{{faces}} physically and
+        <i class="fa-solid fa-skull text-misfortune"></i> <strong>Misfortune:</strong> Roll {{count}}d{{faces}} physically and
         enter the <em>lower</em> result:
-        {{else if (gt count 1)}}
-        Roll {{count}}d{{faces}} physically on the table:
+        {{else if isKeepMulti}}
+        Roll <strong>{{formula}}</strong> physically and enter the total of the {{keptCount}} {{keepModeLabel}} dice ({{min}}–{{max}}):
+        {{else if isMultiDie}}
+        Roll <strong>{{count}}d{{faces}}</strong> physically and enter the total ({{min}}–{{max}}):
         {{else}}
         Roll 1d{{faces}} physically on the table:
         {{/if}}
@@ -43,15 +45,16 @@
         <button type="button" class="btn-stepper btn-minus" data-action="step" data-step="-1" title="Decrease">
           <i class="fa-solid fa-minus"></i>
         </button>
-        <input type="number" name="check-val" class="physical-number-input" data-min="1" data-max="{{faces}}"
-          inputmode="numeric" pattern="[0-9]*" min="1" max="{{faces}}" placeholder="1–{{faces}}" autocomplete="off"
-          autofocus />
+        <input type="number" name="check-val" class="physical-number-input" data-min="{{min}}" data-max="{{max}}"
+          inputmode="numeric" pattern="[0-9]*" min="{{min}}" max="{{max}}" placeholder="{{min}}–{{max}}"
+          aria-label="{{#if isMultiDie}}{{formula}} total ({{min}} to {{max}}){{else}}d{{faces}} result ({{min}} to {{max}}){{/if}}"
+          autocomplete="off" autofocus />
         <button type="button" class="btn-stepper btn-plus" data-action="step" data-step="1" title="Increase">
           <i class="fa-solid fa-plus"></i>
         </button>
       </div>
 
-      {{#if (eq faces 20)}}
+      {{#if showD20Presets}}
       <div class="physical-quick-presets">
         <button type="button" class="btn-quick-preset" data-val="1" title="Natural 1">Nat 1</button>
         <button type="button" class="btn-quick-preset" data-val="20" title="Natural 20">Nat 20</button>
@@ -60,7 +63,7 @@
     </div>
     {{else}}
     <div class="physical-damage-prompt">
-      <p class="physical-instructions">Roll damage dice physically on the table:</p>
+      <p class="physical-instructions">{{#if isDamage}}Roll damage dice physically on the table:{{else}}Roll dice physically on the table:{{/if}}</p>
       <div class="physical-prompt-subnote">Leave blank and click Confirm to roll digitally.</div>
       <div class="physical-damage-pools">
         {{#each pools as |pool|}}
@@ -78,6 +81,7 @@
             <input type="number" name="pool-{{pool.id}}" class="physical-number-input physical-pool-input"
               data-pool-id="{{pool.id}}" data-min="{{pool.min}}" data-max="{{pool.max}}" inputmode="numeric"
               pattern="[0-9]*" min="{{pool.min}}" max="{{pool.max}}" placeholder="{{pool.min}}–{{pool.max}}"
+              aria-label="{{pool.typeLabel}} {{pool.formula}} ({{pool.min}} to {{pool.max}})"
               autocomplete="off" />
             <button type="button" class="btn-stepper btn-plus" data-action="pool-step" data-pool-id="{{pool.id}}"
               data-step="1" title="Increase">
@@ -87,6 +91,13 @@
         </div>
         {{/each}}
       </div>
+      {{#unless isDamage}}
+      {{#if hasModifier}}
+      <div class="physical-modifier-info">
+        Modifier: <strong>{{#if (gte modifier 0)}}+{{/if}}{{modifier}}</strong> (will be added automatically)
+      </div>
+      {{/if}}
+      {{/unless}}
     </div>
     {{/if}}
 
