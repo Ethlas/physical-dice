@@ -53,6 +53,115 @@ export function partitionTotal(total, count, faces) {
 }
 
 /**
+ * Inspects a DiceTerm and its modifiers to determine how many dice are kept,
+ * valid total bounds, and whether it represents a single-kept-die Fortune/Misfortune roll.
+ *
+ * @param {object} term Foundry DiceTerm instance
+ * @param {object|null} [roll=null] Optional parent Roll instance for option flags
+ * @returns {{
+ *   count: number,
+ *   faces: number,
+ *   keptCount: number,
+ *   keepMode: "high"|"low"|null,
+ *   isFortune: boolean,
+ *   isMisfortune: boolean,
+ *   min: number,
+ *   max: number,
+ *   formula: string
+ * }}
+ */
+export function analyzeDiceTerm(term, roll = null) {
+  const count = Math.max(1, Number(term?.number) || 1);
+  const faces = Math.max(1, Number(term?.faces) || 20);
+  const modifiers = Array.isArray(term?.modifiers) ? term.modifiers : [];
+
+  let keptCount = count;
+  let keepMode = null;
+  let hasKeepDropModifier = false;
+
+  for (const mod of modifiers) {
+    if (typeof mod !== "string") continue;
+    const keepMatch = mod.match(/^k([hl])?(\d+)?$/i);
+    if (keepMatch) {
+      keepMode = keepMatch[1]?.toLowerCase() === "l" ? "low" : "high";
+      const rawKeep = keepMatch[2] ? parseInt(keepMatch[2], 10) : 1;
+      keptCount = Math.min(keptCount, Math.max(1, rawKeep));
+      hasKeepDropModifier = true;
+      continue;
+    }
+
+    const dropMatch = mod.match(/^d([hl])?(\d+)?$/i);
+    if (dropMatch) {
+      keepMode = dropMatch[1]?.toLowerCase() === "h" ? "low" : "high";
+      const rawDrop = dropMatch[2] ? parseInt(dropMatch[2], 10) : 1;
+      keptCount = Math.max(1, keptCount - rawDrop);
+      hasKeepDropModifier = true;
+    }
+  }
+
+  if (!hasKeepDropModifier && count > 1) {
+    if (roll?.options?.fortune) {
+      keepMode = "high";
+      keptCount = 1;
+    } else if (roll?.options?.misfortune) {
+      keepMode = "low";
+      keptCount = 1;
+    }
+  }
+
+  const isFortune = count > 1 && keptCount === 1 && keepMode === "high";
+  const isMisfortune = count > 1 && keptCount === 1 && keepMode === "low";
+  const min = keptCount;
+  const max = keptCount * faces;
+  const formula = `${count}d${faces}${modifiers.join("")}`;
+
+  return {
+    count,
+    faces,
+    keptCount,
+    keepMode,
+    isFortune,
+    isMisfortune,
+    min,
+    max,
+    formula
+  };
+}
+
+/**
+ * Builds Foundry DiceTerm result entries for an entered physical total.
+ * Keeps single-die and keep-one Fortune/Misfortune terms filled with the single rolled face,
+ * while partitioning multi-die sums across kept dice (and padding dropped dice at the non-kept extreme).
+ *
+ * @param {number} total Entered physical die value or sum total
+ * @param {ReturnType<typeof analyzeDiceTerm>} analysis Analyzed term bounds and keep/drop info
+ * @returns {Array<{ result: number, active: boolean }>}
+ */
+export function buildTermResults(total, analysis) {
+  const count = Math.max(1, Number(analysis?.count) || 1);
+  const faces = Math.max(1, Number(analysis?.faces) || 20);
+  const keptCount = Math.min(count, Math.max(1, Number(analysis?.keptCount) || count));
+  const keepMode = analysis?.keepMode ?? null;
+
+  if (keptCount === 1) {
+    const safeVal = Math.min(Math.max(Math.round(total), 1), faces);
+    return Array.from({ length: count }, () => ({ result: safeVal, active: true }));
+  }
+
+  const keptResults = partitionTotal(total, keptCount, faces);
+  const droppedCount = Math.max(0, count - keptCount);
+  if (droppedCount > 0) {
+    // Pad dropped dice at the extreme that native keep/drop modifiers will discard
+    const padValue = keepMode === "low" ? faces : 1;
+    for (let i = 0; i < droppedCount; i++) {
+      keptResults.push(padValue);
+    }
+  }
+
+  return keptResults.map(r => ({ result: r, active: true }));
+}
+
+/**
  * Manages physical dice interception and resolution for Foundry VTT and PF2e roll executions.
  */
 export class PhysicalDiceManager {
@@ -166,7 +275,7 @@ export class PhysicalDiceManager {
 
     // In PF2e, inst.minimumValue is a getter on DamageInstance
     if (typeof inst.minimumValue === "number" && Number.isFinite(inst.minimumValue)) {
-      const diceMin = diceTerms.reduce((sum, d) => sum + (d.number ?? 1), 0);
+      const diceMin = diceTerms.reduce((sum, d) => sum + analyzeDiceTerm(d).keptCount, 0);
       return inst.minimumValue - diceMin;
     }
 
@@ -178,10 +287,10 @@ export class PhysicalDiceManager {
         return;
       }
       if (Array.isArray(term.terms)) {
-        let currentSign = 1;
+        let currentSign = sign;
         for (const t of term.terms) {
-          if (t.operator === "-") currentSign = -1;
-          else if (t.operator === "+") currentSign = 1;
+          if (t?.operator === "-") currentSign = -sign;
+          else if (t?.operator === "+") currentSign = sign;
           else findNumbers(t, currentSign);
         }
       }
@@ -194,7 +303,12 @@ export class PhysicalDiceManager {
     };
 
     if (Array.isArray(inst.terms)) {
-      for (const t of inst.terms) findNumbers(t);
+      let currentSign = 1;
+      for (const t of inst.terms) {
+        if (t?.operator === "-") currentSign = -1;
+        else if (t?.operator === "+") currentSign = 1;
+        else findNumbers(t, currentSign);
+      }
     }
     return mod;
   }
@@ -298,21 +412,26 @@ export class PhysicalDiceManager {
           const instanceMod = this.extractNumericModifier(inst, diceTerms);
 
           for (const term of diceTerms) {
-            const count = term.number ?? 1;
-            const faces = term.faces ?? 6;
+            if (term._evaluated || term._isPhysicalIntercepted || (Array.isArray(term.results) && term.results.length > 0)) {
+              continue;
+            }
+            const analysis = analyzeDiceTerm(term);
             pools.push({
               id: `pool_${poolCounter++}`,
               instance: inst,
               term: term,
+              analysis,
               type: inst.type ?? "untyped",
               typeLabel: formatDamageType(inst.type),
               persistent: !!inst.persistent,
               materials: Array.from(inst.materials ?? []).join(", "),
-              formula: `${count}d${faces}`,
-              number: count,
-              faces: faces,
-              min: count * 1,
-              max: count * faces,
+              formula: analysis.formula,
+              number: analysis.count,
+              faces: analysis.faces,
+              keptCount: analysis.keptCount,
+              isSingleDie: analysis.keptCount === 1,
+              min: analysis.min,
+              max: analysis.max,
               mod: instanceMod
             });
           }
@@ -356,9 +475,8 @@ export class PhysicalDiceManager {
         // Assign manual outcomes to dice terms; un-entered pools remain untouched for native digital evaluation
         for (const pool of pools) {
           const totalVal = enteredTotals[pool.id];
-          if (typeof totalVal === "number" && !isNaN(totalVal)) {
-            const diceResults = partitionTotal(totalVal, pool.number, pool.faces);
-            pool.term.results = diceResults.map(r => ({ result: r, active: true }));
+          if (typeof totalVal === "number" && !Number.isNaN(totalVal)) {
+            pool.term.results = buildTermResults(totalVal, pool.analysis);
             pool.term._isPhysicalIntercepted = true;
           }
         }
@@ -375,67 +493,143 @@ export class PhysicalDiceManager {
       }
 
       // -------------------------------------------------------------
-      // Scenario B: CheckRoll or Standard Roll (e.g. 1d20 + mod)
+      // Scenario B: CheckRoll or Standard Roll (1d20 + mod, 13d4, 2d6 + 1d4, etc.)
       // -------------------------------------------------------------
-      const terms = roll.terms ?? [];
-      let diceTerms = roll.dice ?? [];
-      if (!diceTerms.length) {
-        diceTerms = terms.filter(t => typeof t.faces === "number" && typeof t.number === "number");
-      }
+      const rawDiceTerms = Array.isArray(roll.dice) && roll.dice.length > 0
+        ? roll.dice
+        : this.extractDiceFromInstance(roll);
+      const diceTerms = rawDiceTerms.filter(
+        t => !t._evaluated && !t._isPhysicalIntercepted && (!Array.isArray(t.results) || t.results.length === 0)
+      );
 
       if (diceTerms.length === 0) {
         return false;
       }
 
-      // Find d20 or primary die term
-      const d20Term = diceTerms.find(t => t.faces === 20) ?? diceTerms[0];
-      const modTerms = terms.filter(t => typeof t.number === "number" && typeof t.faces !== "number");
-      const totalMod = modTerms.reduce((sum, t) => sum + (t.number ?? 0), 0);
+      const totalMod = this.extractNumericModifier(roll, diceTerms);
 
-      const faces = d20Term.faces ?? 20;
-      const count = d20Term.number ?? 1;
-      const isFortune = d20Term.modifiers?.some(m => m.startsWith("kh")) || !!roll.options?.fortune;
-      const isMisfortune = d20Term.modifiers?.some(m => m.startsWith("kl")) || !!roll.options?.misfortune;
+      // Multi-term standard rolls (e.g. 2d6 + 1d4, 2d20kh + 1d4 + 5)
+      if (diceTerms.length > 1) {
+        const hasExplicitKeepDrop = diceTerms.some(t =>
+          Array.isArray(t.modifiers) && t.modifiers.some(m => /^[kd][hl]?\d*$/i.test(m))
+        );
+        const fortuneTargetTerm = !hasExplicitKeepDrop && (roll.options?.fortune || roll.options?.misfortune)
+          ? (diceTerms.find(t => t.faces === 20 && (t.number ?? 1) > 1) ?? null)
+          : null;
 
-      let d20Result;
+        const pools = diceTerms.map((term, index) => {
+          const analysis = analyzeDiceTerm(term, term === fortuneTargetTerm ? roll : null);
+          const fallbackLabel = analysis.isFortune
+            ? "Fortune"
+            : (analysis.isMisfortune ? "Misfortune" : `Dice ${index + 1}`);
+          return {
+            id: `pool_${index}`,
+            term,
+            analysis,
+            type: "untyped",
+            typeLabel: term.options?.flavor?.trim() || fallbackLabel,
+            persistent: false,
+            materials: "",
+            formula: analysis.formula,
+            number: analysis.count,
+            faces: analysis.faces,
+            keptCount: analysis.keptCount,
+            isSingleDie: analysis.keptCount === 1,
+            isFortune: analysis.isFortune,
+            isMisfortune: analysis.isMisfortune,
+            min: analysis.min,
+            max: analysis.max,
+            mod: 0
+          };
+        });
+
+        let enteredTotals;
+        try {
+          enteredTotals = await RollPrompt.promptDamage({
+            title,
+            subtitle,
+            target: targetInfo,
+            pools,
+            modifier: totalMod,
+            isDamage: false,
+            roll,
+            actor
+          });
+        } catch (err) {
+          if (err?.isPhysicalRollCancelled) throw err;
+          enteredTotals = null;
+        }
+
+        if (!enteredTotals) {
+          throw new PhysicalRollCancelledError();
+        }
+
+        if (enteredTotals.automated || (typeof enteredTotals === "object" && Object.keys(enteredTotals).length === 0)) {
+          roll._isPhysicalIntercepted = true;
+          await evaluateFn.call(roll, options);
+          return true;
+        }
+
+        for (const pool of pools) {
+          const totalVal = enteredTotals[pool.id];
+          if (typeof totalVal === "number" && !Number.isNaN(totalVal)) {
+            pool.term.results = buildTermResults(totalVal, pool.analysis);
+            pool.term._isPhysicalIntercepted = true;
+          }
+        }
+
+        roll._isPhysicalIntercepted = true;
+        await evaluateFn.call(roll, { ...options, allowInteractive: false });
+        return true;
+      }
+
+      // Single-term CheckRoll or Standard Roll (1d20, 2d20kh, 13d4, 4d6kh3, etc.)
+      const primaryTerm = diceTerms[0];
+      const analysis = analyzeDiceTerm(primaryTerm, roll);
+
+      let promptResult;
       try {
-        d20Result = await RollPrompt.promptCheck({
+        promptResult = await RollPrompt.promptCheck({
           title,
           subtitle,
           target: targetInfo,
           modifier: totalMod,
-          faces,
-          count,
-          isFortune,
-          isMisfortune,
-          term: d20Term,
+          faces: analysis.faces,
+          count: analysis.count,
+          keptCount: analysis.keptCount,
+          min: analysis.min,
+          max: analysis.max,
+          formula: analysis.formula,
+          keepMode: analysis.keepMode,
+          isFortune: analysis.isFortune,
+          isMisfortune: analysis.isMisfortune,
+          term: primaryTerm,
           roll,
           actor
         });
       } catch (err) {
         if (err?.isPhysicalRollCancelled) throw err;
-        d20Result = null;
+        promptResult = null;
       }
 
-      if (!d20Result) {
+      if (!promptResult) {
         throw new PhysicalRollCancelledError();
       }
 
       // If user accepted without entering dice, automate check roll digitally
-      if (d20Result.automated || d20Result === "auto") {
+      if (promptResult.automated || promptResult === "auto") {
         roll._isPhysicalIntercepted = true;
         await evaluateFn.call(roll, options);
         return true;
       }
 
-      if (typeof d20Result !== "number" || isNaN(d20Result)) {
+      if (typeof promptResult !== "number" || Number.isNaN(promptResult)) {
         throw new PhysicalRollCancelledError();
       }
 
-      // Populate d20 term results
-      const resultCount = Math.max(1, count);
-      d20Term.results = Array.from({ length: resultCount }, () => ({ result: d20Result, active: true }));
-      d20Term._isPhysicalIntercepted = true;
+      // Populate primary term results
+      primaryTerm.results = buildTermResults(promptResult, analysis);
+      primaryTerm._isPhysicalIntercepted = true;
       roll._isPhysicalIntercepted = true;
 
       // Delegate entirely to native PF2e / Foundry evaluate

@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Releases only on merge to `main`**: the `v*` tag push and manual (`workflow_dispatch`) triggers are removed. A manual run built the selected branch, not the given tag, so it could overwrite an earlier release's files with newer code.
 - **Packaging in Node**: `scripts/build.mjs` replaces the `cp`/`rm`/`zip` steps (dev dependencies `semver` and `yazl` in a new `package.json` and `package-lock.json`, which is no longer git-ignored), so a release package can also be built locally, on Windows too. Every `.mjs` file in `scripts/` is tooling and stays out of `module.zip`. The duplicate `physical-dice.zip` release asset is dropped; the manifest has always pointed to `module.zip`.
 
+### Fixed
+- **Multi-Die & Multi-Term Standard Rolls**: Standard rolls with multiple dice (e.g. `13d4`, `4d6`, `4d6kh3`) now prompt with accurate total bounds (`keptCount..keptCount * faces`) and partition entered totals across individual dice via `partitionTotal` rather than restricting input to `1..faces` and repeating the value across all dice. Multi-term standard rolls (e.g. `2d6 + 1d4`, `2d20kh + 1d4 + 5`) now prompt per die group while preserving Fortune/Misfortune keep-1 behavior and modifier arithmetic (#13).
+
 ---
 
 ## [1.0.0] - 2026-10-14

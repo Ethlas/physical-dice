@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { spawnSync } from "node:child_process";
 
 const rootDir = process.cwd();
 let errorCount = 0;
@@ -274,6 +275,23 @@ if (fs.existsSync(langDir)) {
       logFail(`Invalid JSON in ${relPath}: ${err.message}`);
     }
   }
+}
+
+// 6. Unit Tests
+console.log("\n--- 6. Unit Tests ---");
+const testFile = path.join(rootDir, "tests", "physical-dice.test.mjs");
+if (fs.existsSync(testFile)) {
+  const result = spawnSync(process.execPath, ["--test", testFile], {
+    cwd: rootDir,
+    stdio: "inherit"
+  });
+  if (result.status === 0) {
+    logPass("Unit tests passed: tests/physical-dice.test.mjs");
+  } else {
+    logFail(`Unit tests failed with exit code ${result.status ?? "unknown"}.`);
+  }
+} else {
+  logWarn("No unit test suite found at tests/physical-dice.test.mjs.");
 }
 
 // Summary

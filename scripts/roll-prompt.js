@@ -46,15 +46,22 @@ class RollPromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
   constructor(params, options = {}) {
     super(options);
+    const bounds = RollPrompt.getCheckBounds(params);
     this._mode = params.mode;
     this._title = params.title;
     this._subtitle = params.subtitle ?? "";
     this._target = params.target ?? null;
     this._modifier = params.modifier ?? 0;
-    this._faces = params.faces ?? 20;
-    this._count = params.count ?? 1;
+    this._faces = bounds.faces;
+    this._count = bounds.count;
+    this._keptCount = bounds.keptCount;
+    this._min = bounds.min;
+    this._max = bounds.max;
+    this._formula = params.formula ?? `${bounds.count}d${bounds.faces}`;
+    this._keepMode = params.keepMode ?? null;
     this._isFortune = !!params.isFortune;
     this._isMisfortune = !!params.isMisfortune;
+    this._isDamage = params.isDamage !== false;
     this._pools = params.pools ?? [];
     this._resolve = params.resolve;
     this._reject = params.reject;
@@ -65,13 +72,23 @@ class RollPromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   async _prepareContext(options) {
     const context = await super._prepareContext(options);
     context.isCheck = this._mode === "check";
+    context.isDamage = this._isDamage;
     context.title = this._title;
     context.subtitle = this._subtitle;
     context.target = this._target;
     context.modifier = this._modifier;
+    context.hasModifier = this._modifier !== 0;
     context.pools = this._pools;
     context.faces = this._faces;
     context.count = this._count;
+    context.keptCount = this._keptCount;
+    context.min = this._min;
+    context.max = this._max;
+    context.formula = this._formula;
+    context.isMultiDie = this._keptCount > 1;
+    context.isKeepMulti = this._keptCount > 1 && this._count > this._keptCount;
+    context.keepModeLabel = this._keepMode === "low" ? "lowest" : "highest";
+    context.showD20Presets = this._faces === 20 && this._min === 1 && this._max === 20;
     context.isFortune = this._isFortune;
     context.isMisfortune = this._isMisfortune;
     return context;
@@ -119,17 +136,20 @@ class RollPromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       }, 50);
     }
 
-    // Clear error message in real-time on input
+    // Clear error message and invalid state in real-time on input
     const inputs = this.element?.querySelectorAll("input[type='number']");
     for (const input of inputs ?? []) {
-      input.addEventListener("input", clearError);
+      input.addEventListener("input", () => {
+        input.removeAttribute("aria-invalid");
+        clearError();
+      });
     }
 
     // Enter key submits form
     const form = this.element?.querySelector("form.physical-roll-form");
     if (form && !form._enterListenerBound) {
       form.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") {
+        if (event.key === "Enter" && !event.isComposing) {
           event.preventDefault();
           RollPromptDialog._onSubmit.call(this, event, form);
         }
@@ -159,7 +179,7 @@ class RollPromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     const input = this.element?.querySelector("input[name='d20-val']");
     if (!input) return;
 
-    input.value = RollPrompt.stepValue(input.value, step, 1, this._faces || 20);
+    input.value = RollPrompt.stepValue(input.value, step, this._min, this._max);
     input.dispatchEvent(new Event("input", { bubbles: true }));
     input.focus();
   }
@@ -222,24 +242,27 @@ class RollPromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
     if (this._mode === "check") {
       const input = this.element?.querySelector("input[name='d20-val']");
-      const outcome = RollPrompt.evaluateCheckSubmission(input?.value, this._faces || 20);
+      const outcome = RollPrompt.evaluateCheckSubmission(input?.value, this._faces, this._min, this._max);
 
       if (outcome.error) {
+        input?.setAttribute("aria-invalid", "true");
         showError(outcome.error);
         input?.focus();
         return;
       }
 
+      input?.removeAttribute("aria-invalid");
       this._settled = true;
       this._resolve?.(outcome.automated ? { automated: true } : outcome.value);
       this.close();
       return;
     }
 
-    // Damage Mode
+    // Damage / multi-term pool mode
     const inputsMap = {};
     for (const pool of this._pools) {
       const input = this.element?.querySelector(`input[data-pool-id='${pool.id}']`);
+      input?.removeAttribute("aria-invalid");
       inputsMap[pool.id] = input?.value ?? "";
     }
 
@@ -248,7 +271,9 @@ class RollPromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       showError(outcome.error);
       const errPoolId = outcome.errorPoolId;
       if (errPoolId) {
-        this.element?.querySelector(`input[data-pool-id='${errPoolId}']`)?.focus();
+        const errInput = this.element?.querySelector(`input[data-pool-id='${errPoolId}']`);
+        errInput?.setAttribute("aria-invalid", "true");
+        errInput?.focus();
       }
       return;
     }
@@ -304,44 +329,80 @@ export class RollPrompt {
   }
 
   /**
-   * Evaluates check die input.
+   * Computes validated check/single-term bounds from prompt parameters.
+   * @param {object} [params={}]
+   * @returns {{ faces: number, count: number, keptCount: number, min: number, max: number }}
+   */
+  static getCheckBounds(params = {}) {
+    const faces = Math.max(1, Number(params.faces) || 20);
+    const count = Math.max(1, Number(params.count) || 1);
+    const isSingleKeep = !!params.isFortune || !!params.isMisfortune;
+    const rawKept = Number(params.keptCount);
+    const keptCount = Number.isFinite(rawKept) && rawKept >= 1
+      ? Math.min(count, rawKept)
+      : (isSingleKeep ? 1 : count);
+    const rawMin = Number(params.min);
+    const min = Number.isFinite(rawMin) && rawMin >= 1 ? rawMin : keptCount;
+    const rawMax = Number(params.max);
+    const max = Number.isFinite(rawMax) && rawMax >= min ? rawMax : keptCount * faces;
+
+    return { faces, count, keptCount, min, max };
+  }
+
+  /**
+   * Evaluates check or single-term die input against valid total bounds.
    * Returns { automated: true }, { value: number }, or { error: string }.
    * @param {string} rawVal
-   * @param {number} faces
+   * @param {number} [faces=20]
+   * @param {number} [min=1]
+   * @param {number} [max=faces]
    * @returns {{ automated?: boolean, value?: number, error?: string }}
    */
-  static evaluateCheckSubmission(rawVal, faces = 20) {
-    const trimmed = (rawVal ?? "").trim();
+  static evaluateCheckSubmission(rawVal, faces = 20, min = 1, max = faces) {
+    const safeFaces = Math.max(1, Number(faces) || 20);
+    const safeMin = Number.isFinite(Number(min)) && Number(min) >= 1 ? Number(min) : 1;
+    const safeMax = Number.isFinite(Number(max)) && Number(max) >= safeMin ? Number(max) : safeFaces;
+
+    const trimmed = String(rawVal ?? "").trim();
     if (trimmed === "") {
       return { automated: true };
     }
-    const val = parseInt(trimmed, 10);
-    if (isNaN(val) || val < 1 || val > faces) {
-      return { error: `Please enter a valid roll between 1 and ${faces}.` };
+    if (!/^\d+$/.test(trimmed)) {
+      return { error: `Please enter a valid roll between ${safeMin} and ${safeMax}.` };
+    }
+    const val = Number(trimmed);
+    if (!Number.isInteger(val) || val < safeMin || val > safeMax) {
+      return { error: `Please enter a valid roll between ${safeMin} and ${safeMax}.` };
     }
     return { value: val };
   }
 
   /**
-   * Evaluates damage pool inputs.
+   * Evaluates damage or multi-term pool inputs.
    * Returns { automated: true }, { results: Record<string, number> }, or { error: string, errorPoolId?: string }.
    * @param {Record<string, string>} inputsMap
    * @param {Array<object>} pools
    * @returns {{ automated?: boolean, results?: Record<string, number>, error?: string, errorPoolId?: string }}
    */
   static evaluateDamageSubmission(inputsMap, pools) {
-    const allEmpty = pools.every(p => (inputsMap[p.id] ?? "").trim() === "");
+    const allEmpty = pools.every(p => String(inputsMap[p.id] ?? "").trim() === "");
     if (allEmpty) {
       return { automated: true };
     }
 
     const results = {};
     for (const pool of pools) {
-      const rawVal = (inputsMap[pool.id] ?? "").trim();
+      const rawVal = String(inputsMap[pool.id] ?? "").trim();
       if (rawVal === "") continue;
 
-      const val = parseInt(rawVal, 10);
-      if (isNaN(val) || val < pool.min || val > pool.max) {
+      if (!/^\d+$/.test(rawVal)) {
+        return {
+          error: `Please enter a valid total between ${pool.min} and ${pool.max} for ${pool.typeLabel} (${pool.formula}).`,
+          errorPoolId: pool.id
+        };
+      }
+      const val = Number(rawVal);
+      if (!Number.isInteger(val) || val < pool.min || val > pool.max) {
         return {
           error: `Please enter a valid total between ${pool.min} and ${pool.max} for ${pool.typeLabel} (${pool.formula}).`,
           errorPoolId: pool.id
@@ -491,8 +552,10 @@ export class RollPrompt {
   static async _promptChatCheck(params) {
     const title = params.title || "Check Roll";
     const subtitle = params.subtitle || "";
-    const faces = params.faces || 20;
-    const count = params.count || 1;
+    const bounds = this.getCheckBounds(params);
+    const { faces, count, keptCount, min, max } = bounds;
+    const formula = params.formula || `${count}d${faces}`;
+    const keepMode = params.keepMode ?? null;
     const isFortune = !!params.isFortune;
     const isMisfortune = !!params.isMisfortune;
     const target = params.target || null;
@@ -507,6 +570,14 @@ export class RollPrompt {
       target,
       faces,
       count,
+      keptCount,
+      min,
+      max,
+      formula,
+      isMultiDie: keptCount > 1,
+      isKeepMulti: keptCount > 1 && count > keptCount,
+      keepModeLabel: keepMode === "low" ? "lowest" : "highest",
+      showD20Presets: faces === 20 && min === 1 && max === 20,
       isFortune,
       isMisfortune,
       rollerName
@@ -527,6 +598,9 @@ export class RollPrompt {
           title,
           faces,
           count,
+          keptCount,
+          min,
+          max,
           createdAt: Date.now()
         }
       }
@@ -555,17 +629,22 @@ export class RollPrompt {
     const title = params.title || "Damage Roll";
     const subtitle = params.subtitle || "";
     const pools = params.pools || [];
+    const isDamage = params.isDamage !== false;
+    const modifier = params.modifier ?? 0;
     const target = params.target || null;
     const actor = params.actor || null;
     const rollerName = game.user.name || "Player";
 
     const context = {
       isCheck: false,
+      isDamage,
       mode: "damage",
       title,
       subtitle,
       target,
       pools,
+      modifier,
+      hasModifier: modifier !== 0,
       rollerName
     };
 
@@ -674,9 +753,12 @@ export class RollPrompt {
     }
 
     for (const input of inputs) {
-      input.addEventListener("input", clearError);
+      input.addEventListener("input", () => {
+        input.removeAttribute("aria-invalid");
+        clearError();
+      });
       input.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") {
+        if (event.key === "Enter" && !event.isComposing) {
           event.preventDefault();
           this._submitChatRoll(message.id, card);
         }
@@ -748,25 +830,29 @@ export class RollPrompt {
 
     if (entry.mode === "check") {
       const input = card.querySelector("input[name='check-val']");
-      const outcome = RollPrompt.evaluateCheckSubmission(input?.value, entry.params?.faces || 20);
+      const { faces, min, max } = RollPrompt.getCheckBounds(entry.params);
+      const outcome = RollPrompt.evaluateCheckSubmission(input?.value, faces, min, max);
 
       if (outcome.error) {
+        input?.setAttribute("aria-invalid", "true");
         showError(outcome.error);
         input?.focus();
         return;
       }
 
+      input?.removeAttribute("aria-invalid");
       this.pendingChatRolls.delete(messageId);
       entry.resolve(outcome.automated ? { automated: true } : outcome.value);
       this._markCardSubmitting(card);
       return;
     }
 
-    // Damage Mode
+    // Damage / multi-term pool mode
     const pools = entry.params?.pools || [];
     const inputsMap = {};
     for (const pool of pools) {
       const input = card.querySelector(`input[data-pool-id="${pool.id}"]`);
+      input?.removeAttribute("aria-invalid");
       inputsMap[pool.id] = input?.value ?? "";
     }
 
@@ -775,7 +861,9 @@ export class RollPrompt {
       showError(outcome.error);
       const errPoolId = outcome.errorPoolId;
       if (errPoolId) {
-        card.querySelector(`input[data-pool-id="${errPoolId}"]`)?.focus();
+        const errInput = card.querySelector(`input[data-pool-id="${errPoolId}"]`);
+        errInput?.setAttribute("aria-invalid", "true");
+        errInput?.focus();
       }
       return;
     }

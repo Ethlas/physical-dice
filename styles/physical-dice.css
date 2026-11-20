@@ -220,7 +220,8 @@
   box-shadow: 0 0 0 2px var(--m-accent-glow);
 }
 
-.physical-number-input.has-error {
+.physical-number-input.has-error,
+.physical-number-input[aria-invalid="true"] {
   border-color: var(--m-misfortune) !important;
   box-shadow: 0 0 0 2px rgba(229, 57, 53, 0.25) !important;
 }

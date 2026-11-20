@@ -9,6 +9,7 @@
   },
   "scripts": {
     "verify": "node scripts/verify.mjs",
+    "test": "node --test \"tests/*.test.mjs\"",
     "build": "node scripts/build.mjs"
   },
   "devDependencies": {
